@@ -1,0 +1,27 @@
+{
+  "clusters": [
+    {
+      "nodes": [
+{{- range $ip := split "226 227"}}
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "172.17.4.{{$ip}}"
+              ],
+              "storage": [
+                "172.17.4.{{$ip}}"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+{{- range $x := split "b c" }}
+            "/dev/sd{{$x}}",{{- end}}
+          ]
+        },
+{{- end}}
+      ]
+    }
+  ]
+}

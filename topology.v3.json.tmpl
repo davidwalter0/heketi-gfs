@@ -1,0 +1,40 @@
+{{- $FirstDriveLetter := .FirstDriveLetter -}}
+{{- $Prefix           := .GfsIpPrefix -}}
+{{- $Nodes            := .NodeCount -}}
+{{- $Quad             := .GfsQuad -}}
+{{- $Drives           := .GfsDrives -}}
+{ 
+  "clusters": [
+    {
+      "nodes": [
+{{- range $n := $Nodes | intAGenerator }}
+  {{- $ip := add $Quad $n }}
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "{{ $Prefix }}.{{$ip}}"
+              ],
+              "storage": [
+                "{{ $Prefix }}.{{$ip}}"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+  {{- range $j, $x := charAGenerator $FirstDriveLetter $Drives }}
+    {{- $c := sub $Drives 1 }}
+    {{- if ge $j ($c|atoi)}}
+            "/dev/sd{{$x}}"
+    {{- else}}
+            "/dev/sd{{$x}}",
+    {{- end}}
+  {{- end}}
+          ]
+        }{{if lt $n (sub $Nodes 1|atoi) }},
+  {{- end}}
+{{- end}}
+      ]
+    }
+  ]
+} 

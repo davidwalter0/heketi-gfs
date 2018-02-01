@@ -1,0 +1,114 @@
+{{range $n := generateInt 2}}{{ $ip := add $n 226}}{{$quads := ".GfsNodeIpQuads"}}{{$node := "$quads.$ip"}}---
+# kubectl label no 172.17.4.{{$ip}} gluster.io/server=true
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    description: GlusterFS container deployment template
+    tags: glusterfs
+  labels:
+    gluster-server-name: {{$GfsStorage}}
+    glusterfs: deployment
+    glusterfs-node: 'gfs-node-{{$n}}'
+  name: 'glusterfs-gfs-node-{{$n}}'
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        gluster-server-name: {{$GfsStorage}}
+        glusterfs: pod
+        glusterfs-node: 'gfs-node-{{$n}}'
+        name: glusterfs
+      name: glusterfs
+    spec:
+      nodeSelector:
+        gluster.io/server: "true"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: "gluster.io/server"
+                  operator: In
+                  values: ["true"]
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: gluster-server-name
+                operator: In
+                values: ['{{.GfsStorage}}']
+            topologyKey: 'kubernetes.io/hostname'
+      containers:
+      - image: heketi/gluster:latest
+        imagePullPolicy: Always
+        name: glusterfs
+        # livenessProbe:
+        #   exec:
+        #     command:
+        #     - /bin/bash
+        #     - -c
+        #     - systemctl status glusterd.service
+        #   initialDelaySeconds: 60
+        #   timeoutSeconds: 3
+        # readinessProbe:
+        #   exec:
+        #     command:
+        #     - /bin/bash
+        #     - -c
+        #     - systemctl status glusterd.service
+        #   initialDelaySeconds: 60
+        #   timeoutSeconds: 3
+        securityContext:
+          capabilities: {}
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/lib/heketi
+          name: glusterfs-heketi
+        - mountPath: /run
+          name: glusterfs-run
+        - mountPath: /run/lvm
+          name: glusterfs-lvm
+        - mountPath: /etc/glusterfs
+          name: glusterfs-etc
+        - mountPath: /var/log/glusterfs
+          name: glusterfs-logs
+        - mountPath: /var/lib/glusterd
+          name: glusterfs-config
+        - mountPath: /dev
+          name: glusterfs-dev
+        - mountPath: /sys/fs/cgroup
+          name: glusterfs-cgroup
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/hostname: '172.17.4.{{$ip}}'
+      volumes:
+      - name: glusterfs-heketi
+        hostPath:
+          path: /var/lib/heketi
+      - name: glusterfs-run
+      - name: glusterfs-lvm
+        hostPath:
+          path: /run/lvm
+      - name: glusterfs-etc
+        hostPath:
+          path: /etc/glusterfs
+      - name: glusterfs-logs
+        hostPath:
+          path: /var/log/glusterfs
+      - name: glusterfs-config
+        hostPath:
+          path: /var/lib/glusterd
+      - name: glusterfs-dev
+        hostPath:
+          path: /dev
+      - name: glusterfs-cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+{{end}}
+
+# local variables:
+# mode: yaml
+# end:
+

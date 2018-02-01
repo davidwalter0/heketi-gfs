@@ -1,0 +1,69 @@
+FROM centos:latest
+
+MAINTAINER David Walter walter.david@gmail.com
+
+ENV container docker
+
+RUN yum --setopt=tsflags=nodocs -y update; yum clean all;
+
+RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+
+RUN yum --setopt=tsflags=nodocs -y install wget nfs-utils attr iputils iproute centos-release-gluster39
+
+RUN rm /etc/yum.repos.d/CentOS-Gluster-3.10.repo
+ADD CentOS-Gluster-3.12.repo /etc/yum.repos.d/CentOS-Gluster-3.12.repo
+
+RUN yum --setopt=tsflags=nodocs -y install openssh-server openssh-clients ntp rsync tar cronie sudo xfsprogs glusterfs glusterfs-server glusterfs-geo-replication;yum clean all;
+
+RUN sed -i '/Defaults    requiretty/c\#Defaults    requiretty' /etc/sudoers
+
+# Changing the port of sshd to avoid conflicting with host sshd
+RUN sed -i '/Port 22/c\Port {{.SshPort}}' /etc/ssh/sshd_config
+
+# Backing up gluster config as it overlaps when bind mounting.
+RUN mkdir -p /etc/glusterfs_bkp /var/lib/glusterd_bkp /var/log/glusterfs_bkp;\
+cp -r /etc/glusterfs/* /etc/glusterfs_bkp;\
+cp -r /var/lib/glusterd/* /var/lib/glusterd_bkp;\
+cp -r /var/log/glusterfs/* /var/log/glusterfs_bkp;
+
+# Configure LVM to create LVs and snapshots
+RUN sed -i.save -e "s#udev_sync = 1#udev_sync = 0#" \
+   -e "s#udev_rules = 1#udev_rules = 0#" \
+   -e "s#use_lvmetad = 1#use_lvmetad = 0#" /etc/lvm/lvm.conf
+
+# Adding script to move the glusterfs config file to location
+ADD rpcbind.service /usr/lib/systemd/system/rpcbind.service
+ADD gluster-setup.service /etc/systemd/system/gluster-setup.service
+RUN chmod 644 /etc/systemd/system/gluster-setup.service
+
+# Adding script to move the glusterfs config file to location
+ADD gluster-setup.sh /usr/sbin/gluster-setup.sh
+ADD glusterd.vol /etc/glusterfs/glusterd.vol
+ADD sshd_config /etc/ssh/sshd_config
+RUN chmod 500 /usr/sbin/gluster-setup.sh
+RUN chmod 444 /etc/ssh/sshd_config
+RUN yum -yq install authconfig; authconfig --updateall
+#RUN echo 'root:password' | chpasswd
+VOLUME [ “/sys/fs/cgroup” ]
+
+RUN systemctl disable nfs-server.service
+RUN systemctl enable ntpd.service
+RUN systemctl disable rpcbind.socket
+RUN systemctl enable rpcbind.service
+RUN systemctl enable glusterd.service
+RUN systemctl enable gluster-setup.service
+RUN systemctl enable systemd-user-sessions.service
+EXPOSE 2222 2722 111 245 443 24007 2049 8080 6010 6011 6012{{range $n := generateInt 100}} {{add $n 49152}}{{end}}
+
+CMD ["/usr/sbin/init"]
+
+# local variables:
+# mode: conf
+# end:

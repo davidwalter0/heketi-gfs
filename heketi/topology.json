@@ -1,0 +1,100 @@
+{ 
+  "clusters": [
+    {
+      "nodes": [
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "172.17.4.226"
+              ],
+              "storage": [
+                "172.17.4.226"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+            "/dev/sdb",
+            "/dev/sdc",
+            "/dev/sdd",
+            "/dev/sde",
+            "/dev/sdf",
+            "/dev/sdg",
+            "/dev/sdh",
+            "/dev/sdi"
+          ]
+        },
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "172.17.4.227"
+              ],
+              "storage": [
+                "172.17.4.227"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+            "/dev/sdb",
+            "/dev/sdc",
+            "/dev/sdd",
+            "/dev/sde",
+            "/dev/sdf",
+            "/dev/sdg",
+            "/dev/sdh",
+            "/dev/sdi"
+          ]
+        },
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "172.17.4.228"
+              ],
+              "storage": [
+                "172.17.4.228"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+            "/dev/sdb",
+            "/dev/sdc",
+            "/dev/sdd",
+            "/dev/sde",
+            "/dev/sdf",
+            "/dev/sdg",
+            "/dev/sdh",
+            "/dev/sdi"
+          ]
+        },
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "172.17.4.229"
+              ],
+              "storage": [
+                "172.17.4.229"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+            "/dev/sdb",
+            "/dev/sdc",
+            "/dev/sdd",
+            "/dev/sde",
+            "/dev/sdf",
+            "/dev/sdg",
+            "/dev/sdh",
+            "/dev/sdi"
+          ]
+        }
+      ]
+    }
+  ]
+} 

@@ -1,0 +1,117 @@
+# Default from some app
+# ------------------------- ClusterRoleBinding ------------------------- #
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: system:default-sa
+# subjects:
+#   - kind: ServiceAccount
+#     name: default
+#     namespace: default
+# roleRef:
+#   kind: ClusterRole
+#   name: admin
+#   apiGroup: rbac.authorization.k8s.io
+
+# ------------------------- ServiceAccount ------------------------- #
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: {{ .GfsName }}
+    app: {{ .GfsName }}
+  name: {{ .GfsName }}
+  namespace: {{ .Namespace }}
+
+# ------------------- ClusterRole ------------------- #
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .GfsName }}
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["services", "endpoints"]
+    verbs: ["get"]
+  - apiGroups: ["extensions"]
+    resources: ["podsecuritypolicies"]
+    resourceNames: ["{{ .GfsName }}"]
+    verbs: ["use"]
+
+# ------------------- ClusterRoleBinding ------------------- #
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: {{ .GfsName }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .GfsName }}
+subjects:
+- kind: ServiceAccount
+  name: {{ .GfsName }}
+  namespace: {{ .Namespace }}
+
+# ------------------------- Service ------------------------- #
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{.GfsService}}
+  namespace: {{.Namespace}}
+spec:
+  ports:
+  - name: ssh
+    port: 2222
+    targetPort: 2222
+  - name: glusterfs-api
+    port: 24007
+    targetPort: 24007
+  - name: glusterfs-infiniband
+    port: 24008
+    targetPort: 24008
+{{- range $n := generateInt 100}}
+  {{- $port := add $n 49152 }}
+  - name: glusterfs-port-{{$port}}
+    port: {{$port}}
+    targetPort: {{$port}}
+{{- end}}
+  - name: glusterfs-nfs-0
+    port: 38465
+    targetPort: 38465
+  - name: glusterfs-nfs-1
+    port: 38466
+    targetPort: 38466
+  - name: glusterfs-nfs-2
+    port: 38467
+    targetPort: 38467
+  - name: nfs-rpc
+    port: 111
+    targetPort: 111
+  - name: nfs-rpc-udp
+    port: 111
+    targetPort: 111
+    protocol: UDP
+  - name: nfs-portmap
+    port: 2049
+    targetPort: 2049
+  selector:
+    app: {{.GfsStorage}}
+
+# local variables:
+# mode: yaml
+# end:

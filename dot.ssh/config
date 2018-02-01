@@ -1,0 +1,11 @@
+UserKnownHostsFile      /dev/null
+StrictHostKeyChecking   no
+LogLevel                quiet
+VerifyHostKeyDNS        no
+ConnectTimeout          30
+TCPKeepAlive            yes
+ServerAliveCountMax     10
+ControlMaster           yes
+Compression             yes
+GSSAPIAuthentication    no
+

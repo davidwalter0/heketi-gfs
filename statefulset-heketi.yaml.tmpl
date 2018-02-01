@@ -1,0 +1,224 @@
+# ---
+# kind: Service
+# apiVersion: v1
+# metadata:
+#   name: heketi
+#   namespace: default
+# spec:
+#   ports:
+#   - name: heketi-ctrl
+#     port: 8080
+#   selector:
+#     app: heketi
+
+---
+kind: StatefulSet
+apiVersion: apps/v1beta1
+metadata:
+  annotations:
+    description: Defines how to deploy Heketi
+  labels:
+    app: heketi
+  name: {{.HeketiName}}
+spec:
+  serviceName: {{.HeketiName}}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: heketi-pod
+        name: {{.HeketiName}}
+      name: {{.HeketiName}}
+    spec:
+      nodeSelector:
+        gluster.io/server: "true"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values: ['172.17.4.226']
+      ########## initContainers:
+      ########## - name: init-myservice
+      ##########   image: heketi/heketi:dev
+      ##########   # image: busybox
+      ##########   command:
+      ##########   - /var/lib/heketi/heketi-config.sh
+      ##########   # args:
+      ##########   #   - --tls-key-file=/certs/dashboard.key
+      ##########   #   - --tls-cert-file=/certs/dashboard.crt
+      ##########   volumeMounts:
+      ##########   - name: var-lib-heketi
+      ##########     mountPath: /var/lib/heketi/
+      ##########   - name: secret
+      ##########     mountPath: /var/lib/heketi/secret
+      ##########   - name: config
+      ##########     mountPath: /etc/heketi/config
+      ########## # - name: init-mydb
+      ########## #   image: busybox
+      ########## #   command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+      containers:
+      - env:
+        - name: HEKETI_EXECUTOR
+          value: kubernetes
+        - name: HEKETI_KUBE_USE_SECRET
+          value: "y"
+        - name: HEKETI_KUBE_TOKENFILE
+          value: /var/lib/heketi/secret/token
+        - name: HEKETI_KUBE_NAMESPACEFILE
+          value: /var/lib/heketi/secret/namespace
+        - name: HEKETI_FSTAB
+          value: /var/lib/heketi/fstab
+        - name: HEKETI_SNAPSHOT_LIMIT
+          value: "14"
+        - name: HEKETI_KUBE_INSECURE
+          value: "y"
+        - name: HEKETI_KUBE_APIHOST
+          value: '{{.HeketiKubeApiHost}}'
+        # image: heketi/heketi:dev
+        # image: gluster/gluster-centos:latest
+        image: davidwalter/heketi-centos:latest
+        imagePullPolicy: Always
+        # imagePullPolicy: IfNotPresent
+        # command:
+        # - bash
+        # - -c
+        # - |
+        #   set -x
+        #   if ! grep -q "heketi:x:996:996:heketi user:/var/lib/heketi:/sbin/nologin" /etc/passwd; then
+        #       echo "heketi:x:996:996:heketi user:/var/lib/heketi:/sbin/nologin" >> /etc/passwd
+        #   fi
+        #   if ! grep -q "heketi:x:996:" /etc/group; then
+        #       echo "heketi:x:996:" >> /etc/group
+        #   fi
+        #   systemctl enable heketi
+        #   rm -rf /etc/systemd/system/heketi.service;
+        #   cp /etc/heketi/heketi.service /etc/systemd/system/heketi.service;
+        #   yum install -y epel-release
+        #   yum -y --enablerepo=epel install heketi heketi-client
+        #   yum remove -y openssh-server;
+        #   mkdir -p /var/lib/heketi /etc/heketi
+        #   touch /var/lib/heketi/fstab
+        #   chown heketi:heketi -R /var/lib/heketi /etc/heketi
+        #   systemctl stop glusterd; systemctl disable glusterd; systemctl daemon-reload;
+        #   systemctl enable heketi; systemctl daemon-reload; systemctl restart heketi;
+        #   rm -f {/var,}/run/nologin
+        #   exec /usr/sbin/init
+        securityContext:
+          privileged: true
+        # livenessProbe:
+        #   httpGet:
+        #     path: /hello
+        #     port: 8080
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 30
+        name: {{.HeketiName}}
+        ports:
+        - containerPort: 8080
+        # readinessProbe:
+        #   httpGet:
+        #     path: /hello
+        #     port: 8080
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 3
+        volumeMounts:
+        - name: var-lib-heketi
+          mountPath: /var/lib/heketi/
+        - name: token
+          mountPath: /var/lib/heketi/secret
+        # - name: etc
+        #   mountPath: /etc/heketi
+        # - name: ssh
+        #   mountPath: /var/lib/heketi/.ssh
+        - name: app-run
+          mountPath: /run
+        - name: app-dev
+          mountPath: /dev
+        - name: app-cgroup
+          mountPath: /sys/fs/cgroup
+        - name: heketi-etc
+          mountPath: /var/lib/heketi/config/etc
+        - name: heketi-ssh
+          mountPath: /var/lib/heketi/config/ssh
+          
+      ###################
+      hostNetwork: true
+      ###################
+      volumes:
+      # - name: db
+      - name: token
+        secret:
+          secretName: '{{.HeketiKubeSecretName}}'
+      - name: heketi-etc
+        secret:
+          secretName: '{{.HeketiConfigSecretName}}'
+      - name: heketi-ssh
+        secret:
+          secretName: '{{.HeketiSshSecretName}}'
+########       - name: etc
+########         secret:
+########           secretName: '{{.HeketiConfigSecretName}}'
+######## #         "mode": 256,
+######## #         "octal": "0400"
+########           defaultMode: 292
+########           items:
+########           - key: authorized_keys
+########             path: authorized_keys
+########             mode: 292
+########           - key: config
+########             path: config
+########             mode: 292
+########           - key: heketi-configure.sh
+########             path: heketi-configure.sh
+########             mode: 493
+########           - key: heketi.environment
+########             path: heketi.environment
+########             mode: 292
+########           - key: heketi.json
+########             path: heketi.json
+########             mode: 292
+########           - key: heketi.service
+########             path: heketi.service
+########             mode: 292
+########           - key: heketi_key
+########             path: heketi_key
+########             mode: 256
+########           - key: heketi_key.pub
+########             path: heketi_key.pub
+########             mode: 292
+########           - key: topology.json
+########             path: topology.json
+########             mode: 292
+########       - name: ssh
+########         secret:
+########           secretName: '{{.HeketiSshSecretName}}'
+########           defaultMode: 256
+########           items:
+########           - key: authorized_keys
+########             path: authorized_keys
+########             mode: 292
+########           - key: config
+########             path: config
+########             mode: 292
+########           - key: heketi_key
+########             path: heketi_key
+########             mode: 256
+########           - key: heketi_key.pub
+########             path: heketi_key.pub
+########             mode: 292
+      - name: var-lib-heketi
+        hostPath:
+          path: /var/lib/heketi
+      - name: app-run
+      - name: app-dev
+        hostPath:
+          path: /dev
+      - name: app-cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+
+# local variables:
+# mode: yaml
+# end:

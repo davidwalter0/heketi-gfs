@@ -1,0 +1,32 @@
+{
+  "clusters": [
+    {
+      "nodes": [
+{{- range $n := atoi .NodeCount | generateInt -}}
+  {{ $ip := add $n 226 | printf "%s" }}
+        {
+          "node": {
+            "hostnames": {
+              "manage": [
+                "{{ env "GfsNodeIpQuads" }}.{{$ip}}"
+              ],
+              "storage": [
+                "{{ env "GfsNodeIpQuads" }}.{{$ip}}"
+              ]
+            },
+            "zone": 1
+          },
+          "devices": [
+{{- range $j, $x := env "GFS_DRIVES"|split}}
+{{- if $j}}
+            "/dev/sd{{$x}}"
+{{- else}}
+            "/dev/sd{{$x}}",{{end}}{{- end}}
+          ]
+        }{{if lt $n (sub (env "NODE_COUNT"|atoi) 1|atoi) }},{{end}}
+{{- end}}
+      ]
+    }
+  ]
+}
+

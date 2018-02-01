@@ -1,0 +1,10 @@
+[Unit]
+Description=Configuring Heketi in container
+Before=heketi.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/heketi-setup.sh
+
+[Install]
+WantedBy=multi-user.target
